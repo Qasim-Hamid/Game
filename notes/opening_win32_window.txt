@@ -1,0 +1,63 @@
+WNDCLASS
+
+- Created under winmain
+- intializing struct with = {} initializes all it's values to 0
+- Contains window class attributes that are registered by the RegisterClass function
+- style: Specify certain elements of a window such as its context
+    - CS_CLASSDC: single device context for all windows in class (only a single thread can access 
+    the device context at a time)
+    - CS_OWNDC: Unique device context for each window in the class (multi-thread)
+    - CS_HREDRAW: Redraws window if width is changed when the window is moved or its size is adjusted
+    - CS_VREDRAW: Same as HREDRAW, just for height
+- lpfnWndProc -> pointer to function that defines how the window responds to messages/events
+- hInstance -> What instance is setting the window (winmain) (can call getmodulehandle = 0 instead)
+- lpszClassName -> name for window class
+
+WindowProc
+
+- Callback called when windows needs to do something to the window it is running
+- hwnd -> handle to window (allows windows to know which window we are talking about)
+- uMsg -> Message windows is asking us to handle
+    - Use switch statement to dictate behaviour for different messages being handled (use break out)
+    - Use WM_size, destory, close, activateapp, and a default statement
+    - OutputDebugStringA for testing if a message is going through (good to check if code is being
+    executed)
+    - LRESULT Result is the output of the system (0 good, not 0 bad)
+    - DefWindowProc for default case if the switch case does not handle a message
+
+RegisterClass(&WindowClass)
+
+- register class to windows for use (can fail so use if else)
+- Done under winmain since we're registering during main
+- HWDN WindowHandle = CreateWindowEx creates a window for us with the handle it returns
+    - Use class name registered for window being created
+    - Actual window style DWORD (use OVERLAPPEDWINDOW)|WS_VISIBLE
+    - x,y,width,height can use CW_USEDEFAULT
+    - Instance from winmain
+- Returns windows handle if passed, null otherwise
+- Windows does not automatically deposit messages coming to the window, they are put in a queue
+- It is the job of the programmer to loop through the messages and extract them to send them to the
+window
+- This is done using GetMessage, pulls messages from queue, waits if nothing there
+    - Set this up in an infinite loop, break out in the case of an error
+    - MSG is address of message
+    - HWND, handle to window that is getting message, if 0 retrieves messages from any window
+    - min, max, are filters for the message, pass 0 to disable this filter 
+    - Capture return result and check if it is an error
+    - Windows has to translate and dispatch the message 
+    - Done using TranslateMessage(&Message) and DispatchMessage(&Message)
+    - If these return a fail, we can't really do anything since windows handles this
+
+case WM_PAINT:
+
+- Type of message handled by the window 
+- BeginPaint -> about to update window
+- EndPaint -> When we are done
+- paint to a window
+- refernece paint stuct and window being painted to
+- Returns device context (HDC)
+- EndPaint close paint 
+- PatBlt -> graphics utility that allows blackness/whiteness
+- Takes context, widht and height of rectangle, and type of coating (blackness/whiteness)
+- beginpaint takes a paintstruct that requires that dimensions of the rectangle its painting
+- left, right, top, bottom

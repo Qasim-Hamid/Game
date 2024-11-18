@@ -1,0 +1,17 @@
+PostQuitMessage() -> Used for quiting window in switch case
+Windows can handle destruction of an object, window freezes while closing if programmer does this themselves
+Running state that controls when messages are being processed by window (can put a 'are you sure you want to exit?')
+
+Global variables can be accessed anywhere, which is bad since we don't want the code to be accessed by everything
+Static has three definitions:
+- internal - Function made only for file that it is defined in
+- local_persist - Variable is defined in a context and is remembered when the context is exited
+- global - Variable acts as a global variable (Automatically initialized to 0)
+
+#define name definition
+
+Want to give the app a bitmap that windows can use to draw on the screen
+DIB - Device Independant Bitmap
+    ResizeDIBSection -> Whenever window size changes (WM_SIZE), the bitmap is resized. 
+    Find window size after resizing with WM_SIZE using GetClientRect
+

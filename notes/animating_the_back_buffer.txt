@@ -1,0 +1,48 @@
+BitBLT is the same as StretchDIBits but it requires:
+- BitmapHandle and a BitmapDeviceContext
+StretchDIBits only needs the size of memory required and the Width and height of the rectangle
+
+Just tell Windows we need memory, since we need 32 bits (8 for r, g, b, and then 8 for bit):
+- This is because we are writing a 32 bit program, so we can align each of our pixels on 4 byte boundaries
+So the bitmap memory = (Width*Height)*BytesPerPixel
+
+HeapAlloc: Gives memory out of pages, so it can be any value
+VirtualAlloc: Gives memory ie sets pages, so it expects atleast 4096 bytes (1 Page) of memory 
+
+We use VirtualAlloc we will be in charge of all the memory in the game:
+- lpAddress -> Starting address of region to allocate (we don't care so 0)
+- dwSize -> Size of region in bytes, if address is null, it is rounded to the nearest page boundary
+- flAllocationType -> MEM_COMMIT / MEM_RESERVE
+    Commit: 64 bits of address space all vacant, announcing that the memory space is being used. Page table that says which pages of the process are actually being used by the application
+    Reserve: Make sure memory is available for us, windows will not track it since it is not being committed, but just keep it ready for when we need it.
+- flProtection -> Security, i.e can cpu run code that resides in this memory, read/write access...
+
+Returns a void * that points to the memory that we need
+if we need to resize DIB section and BitmapMemory is already allocated we want to free it.
+VirtualFree();
+- Address (returned by pointer) 
+- Size of Memory being freed (send null since program can remember what the size was and do it for us)
+- MEM_RELEASE gives back pages to operating system, which it can use for something else
+- MEM_DECOMMIT leaves the pages reserved, but still keeps the memory reserved for the program
+
+Instead of freeing memory, we can VirtualProtect it. Change the protection context of the page to disable execution, writing and reading. Why use this?
+If there is a pointer to memory that has been freed and writes to it, a use after free bug will be discovered which is very hard to debug. This is easier to detect and take of
+
+Once memory is sorted using VirtualAlloc, it can be given to StretchDIBits 
+BitmapWidth and BitmapHeight are the destination rectangle, WindowWidth and WindowHeight are the source rectangle
+The source rectangle is stretched to fit the destination rectangle
+So basically taking the size of the whole window and stretching it down into the size of the bitmap which we well be drawing. 
+When describing the BitmapHeight, if it is a negative value, the pixels in the DIB (Device-Independant Bitmap) are read from top-down. So the pixels are printed from the top-left and go to the end of the row, where they then continue on the next line starting from the left all the way to the bottom.
+
+C does not know what to do with a void pointer, so we have to cast it to a certain type
+Use 8-bit instead of 16-bit since when we move a pointer in memory, c will silently multiply the movement by the size of the variable it is pointing to. So if we move a uint16 * to something, it will shift by 2 bytes each time. We want control of moving by 1 byte at a time.
+Cast the row pointer to uint32 *Pixel, since each pixel is 4 bytes, and then once we increment the pixel by the size of the pitch, it will go up 1 byte at a time since we are using uint8_t instead uint16_t.
+Eventhough we increment the pixel each time, and it would hypothetically be aligned with the start of the next row in memory each time it loops through the amount of pixels in a row, we increment the row by using the pitch since it generally doesn't fully align with the loop incrementing we did
+
+The application is running under the little endian architecture, so if the processor is loading values into a 32 bit value in memory, it will load the first byte into the lowest part of the 32 bit value, and the last byte will go in the highest part.
+So RGBX is stored in memory as XBGR.
+But in actuallity it looks like BGRX, cause windows wanted XRGB in memory
+
+PeekMessage pulls message out of loop. Returns 1 if a message is pulled out.
+Translate and Dispatch messages as before.
+
