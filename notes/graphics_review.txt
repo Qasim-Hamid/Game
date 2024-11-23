@@ -1,0 +1,58 @@
+Set the CALLBACK WinMain
+Create empty WNDCLASS windowclass
+
+NOTE: All of the items stored in memory in the main program go on the stack
+    First item in mem:  0x1ffcao
+    Second item in mem: 0x1ffbf0
+    Therefore the stack is growing downwards
+    First item's most significant bit is bigger then second item's most significant bit, so new items are pushed downwards in memory
+    This also means that the maximum bytes we can store in memory is less than 0x2FFFFF
+    0x2FFFFF = 22 bits = 2^21 = 2^10 * 2^10 ^ 2^1
+
+    1kb = 1024 bytes = 2^10
+    0b100 0000 0000
+    0x400
+    1024 bytes -> 1kb (uint8 mem = 1024)
+    1024kb -> 1mb (uint8 mem = 1024 * 1024)
+    1024mb -> 1kb (uint8 mem = 1024 * 1024 * 1024)
+    1024kb -> 1tb (uint8 mem = 1024 * 1024 * 1024 * 1024)
+
+Initialize globalBackbuffer (initialized at start of program, so not part of the stack)
+Initialized in the Win32ResizeDIBSection that:
+- Checks if buffer is already allocated, in which case it is VirtualFree
+- Sets all the values
+- Allocates total memory of buffer by multiplying the number of pixels (width x height) by the number of bytes per pixel (Done using VirtualAlloc)
+- Calculate number of bytes for the pitch (width x number of bytes per pixel)
+
+Fill out WindowClass
+Every process has it's own address space. Since a pointer only references a place in memory, the operating system will not be able to access that process unless it is given a handle to the process
+
+Once windowclass is filled, Register it with RegisterClassA
+- Call CreateWindowExA
+- Pass instance of Windowclass again
+
+Enter while loop that continues for the rest of program life that processes messages on queue
+- MSG Message; Use PeekMessage to put msg in Message
+- Translate and Dispatch Message
+
+RenderWeirdGradient -> Takes GlobalBackbuffer, Xoffset, Yoffset
+- Row is uint8, so it acts as a single byte of memory. 
+- Pixel is uint32, since a pixel stores 32bits of info
+- Points to top left pixel, loops through each pixel and:
+- Blue: Adds its x location + offset
+- Green: Adds its y location + offset
+- At 256, the buffer overflows and starts again at 0
+- Pixel input into memory: BB GG RR XX
+- Increment after equating pixel value with ++ after *pixel, it increments by 32 bits since its uint32
+
+Take handle into window, so we can issue draw calls
+Use helper func. to get rect dimensions () -> use GetClientRect
+Once that is done, now we can call the function Win32DisplayBufferInWindow that will actually print the result of the GlobalBackBuffer to the screen
+- Calls StretchDIBits
+When we finish with the DC, we must return it with ReleaseDC
+Increment the x and y offset
+
+When the WM_SIZE message is called, the window will not be able to stretchDIBit as normal since the message queue is active.
+In order to redraw the buffer when the window is resized, we must have a seperate event that will paint the window for us in this case. 
+WM_PAINT calls the same Win32DisplayBufferInWindow func, it just uses the BeginPaint and EndPaint functions when calling it. They are there just so the queue is not flooded with WM_Paint messages, since endpaint tells windows when the problem has been solved. 
+WM_PAINT is called since we put a flag while setting the window that said if the window is resized vertically or horizontally, the window should be rendered again.
