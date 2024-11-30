@@ -4,7 +4,7 @@
 bool Running = true;
 
 LRESULT CALLBACK MainWndProc(
-    HWND hwnd,        // handle to wnd
+    HWND Window,        // handle to wnd
     UINT uMsg,        // message identifier
     WPARAM wParam,    // first message parameter
     LPARAM lParam)    // second message parameter
@@ -14,26 +14,50 @@ LRESULT CALLBACK MainWndProc(
     { 
         case WM_CREATE: 
             // Initialize the wnd. 
-            OutputDebugStringA("WM_CREATE\n");
-            return 0; 
- 
-        case WM_PAINT: 
-            // Paint the wnd's client area. 
-            return 0; 
- 
-        case WM_SIZE: 
-            // Set the size and position of the wnd. 
-            OutputDebugStringA("WM_SIZE\n");
-            return 0; 
- 
-        case WM_DESTROY:
-            OutputDebugStringA("WM_DESTROY\n");
-            return 0;
+            {
+                OutputDebugStringA("WM_CREATE\n");
+            } break;
 
+        case WM_SIZE: 
+            {
+            // Set the size and position of the wnd. 
+                OutputDebugStringA("WM_SIZE\n");
+            } break;
+ 
+        case WM_CLOSE:
+            {
+            // Fix program not exiting after being destroyed
+                OutputDebugStringA("WM_CLOSE\n");
+                DestroyWindow(Window);
+                Running = false;
+            } break;
+
+        case WM_PAINT:
+            {
+                PAINTSTRUCT ps;
+                HDC DC = BeginPaint(Window, &ps);
+                int X = ps.rcPaint.left;
+                int Y = ps.rcPaint.top;
+                int Height = ps.rcPaint.bottom - ps.rcPaint.top;
+                int Width = ps.rcPaint.right - ps.rcPaint.left;
+                static DWORD Operation = WHITENESS; //Only initializes the first time
+                PatBlt(DC, X, Y, Width, Height, Operation);
+                if (Operation == WHITENESS) {
+                    Operation = BLACKNESS;
+                }
+                else {
+                    Operation = WHITENESS;
+                }
+                EndPaint(Window, &ps); 
+            } break;
+                
         default: 
-            return DefWindowProc(hwnd, uMsg, wParam, lParam); 
+            {
+                return DefWindowProc(Window, uMsg, wParam, lParam); 
+            } break;
     } 
     return 0; 
+
 } 
 
 int WINAPI wWinMain(HINSTANCE hInstance, 
