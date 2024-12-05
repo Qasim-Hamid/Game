@@ -1,0 +1,74 @@
+internal void Win32ResizeDIBSection
+  - Either creates new DIB if never called or refreshes it
+  - Everytime WM_size is called, call the func
+  - CreateDIBSection to create section
+  - Returns HBITMAP BitmapHandle
+  - Use void pointer to BitmapMemory to reference the memory for the DIBSection
+  - Create BitmapInfoHeader to pass in:
+    - biSize -> does not include color table
+  - Store the BitmapMemory, BitmapHandle, and BitmapInfo as global vars
+  - BitmapHandle initializes to Null if it fails, so use it to check if the Bitmap exists
+  - We must free the Bitmap every time, so we use DeleteObject here
+  - Require DC for creation, so create a DC with CreateCompatibleDC(0) (Set as global var, it will be used again);
+  - Need to check if DC exists, if not call above line 
+
+UPDATE Win32ResizeDIBSection 
+  - We can create the memory for the bitmap by ourselves, windows does not need to call CreateDIBSection to create it
+  - In CreateDIBSection, we needed to use the BitmapHandle and BitmapDeviceContext to call it, but we don't need them now
+  - We allocate our own memory by calling Virtual Alloc with the size of memory we need
+  - There are Width * Height pixels of display that will be used
+  - Each Pixel is 4 bytes RGBX in memory, so (Width*Height)*4 bytes = total memory size
+  - Allocate using VirtualAlloc 
+  - Free using VirtualFree
+
+Tip for checking for memory leaks:
+  - Can view running process in task manager, and check if the working set is staying at a constant amount
+
+In WM_SIZE:
+  - call GetClientRect to get size of window that we are drawing in
+  - Pass window width and height to Win32resizeDIBSection
+
+in WM_PAINT:
+  - Function Win32UpdateWindow is called
+  - The function calls StertchDIBits, which it runs with the variables we initialized in WM_SIZE
+
+internal void Win32UpdateWindow
+  - StretchDIBits
+    - Takes BitmapMemory and BitmapInfo as inputs 
+    - Takes dest and src coordinates
+    - src and dest sizes are the same
+    - Instead of passing X, Y, Width, Height, we pass 
+                         0, 0, BitmapWidth, BitmapHeight
+    - Since we will be reusing BitmapWidth and Height, we will temporarily store them as globals
+    - Pitch is number of bytes required to move from start of a row to the start of the next row
+    - Stride is number of bytes requried to move from end of row to the start of next row
+
+Animation:
+  - Once the bitmap is being drawn to in Win32ResizeDIBSection, make another function just for teh animation
+  - Update the bitmap in Win32ResizeDIBSection
+  - Loop through each pixel in Bitmap
+  - Pixel is 32 bits, so use uint32_t
+  - Pitch is number of bytes to next row -> so Width*BytesPerPixel to get to next row
+  - x86 is little endian so it fills information in backwards
+    - Our pixel is stored in memory as RGBX, and we are on little endian architecture, so windows loads values into the back of the 32 bit register
+    The 32 bit pixel would be filled in the back to front so -> 0x xxBBGGRR
+    - Windows wanted the register to show the value as 0x xxRRGGBB, so they flipped the RGB in memory to be stored as BGR
+    - so when it would be filled into memory it would be look like 0x xxRRGGBB
+  - We can add an offset to the gradient we are rendering to move the bitmap render by a bit
+  - Then we can call bitmap animation and 
+
+Project Structure:
+  - WM_SIZE -> Win32ResizeDIBSection
+  - WM_PAINT -> Win32UpdateWindow -> Calls StretchDIBits
+
+  - So first the WM_SIZE call is made when the size of the window is changed:
+    - Win32ResizeDIBSection checks if memory is allocated and frees it, then it:
+      - Initializes the width and height of the resized window (Globals)
+      - Initiailizes BitmapInfo and BitmapMemory (Globals)
+
+  - Next WM_PAINT is called since it is repainted due to being resized, so:
+    - WM_PAINT calls Win32UpdateWindow which calls StretchDIBits with the:
+    - BitmapMemory and BitmapInfo that was created, 
+
+  Animating the backbuffer:
+    - loop through each single pixel in buffer

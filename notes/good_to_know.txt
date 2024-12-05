@@ -1,0 +1,50 @@
+Typecasting when adding bits:
+
+  int main() {
+    uint16_t x = 4;
+    uint16_t *two_byte_pointer = &x;
+    uint8_t one_byte_value = 255;
+    
+    printf("%d\n", two_byte_pointer); //2132925236
+
+    two_byte_pointer += sizeof(one_byte_value);
+    //sizeof() returns sizeof an item in bytes
+    //But since this is adding to a uint16_t, it multiplies 1 by 2
+
+    printf("%d\n", two_byte_pointer); //2132925238
+    
+    two_byte_pointer = (uint16_t *)((uint8_t *)two_byte_pointer
+    + sizeof(one_byte_value));
+
+    printf("%d\n", two_byte_pointer); //2132925239
+  } 
+
+Working with memory
+  First item in mem:  0x1ffcao
+  Second item in mem: 0x1ffbf0
+  Therefore the stack is growing downwards
+  First item's most significant bit is bigger then second item's most significant bit, so new items are pushed downwards in memory
+  This also means that the maximum bytes we can store in memory is less than 0x2FFFFF
+  0x2FFFFF = 22 bits = 2^21 = 2^10 * 2^10 ^ 2^1
+
+  1kb = 1024 bytes = 2^10
+  0b100 0000 0000
+  0x400
+  1024 bytes -> 1kb (uint8 mem = 1024)
+  1024kb -> 1mb (uint8 mem = 1024 * 1024)                                                       
+  1024mb -> 1kb (uint8 mem = 1024 * 1024 * 1024)
+  1024kb -> 1tb (uint8 mem = 1024 * 1024 * 1024 * 1024)
+
+Use of specific number of bytes:
+  - To use an 8 bit unsigned int use:
+  uint8_t
+  - This allows the use of 1 byte when using unsigned number across all platforms
+  - Good for pointer arithmetic, i.e uint8_t will only shift by 1 byte when incrementing
+
+Little endian architecture:
+  - x86 is little endian so it fills information in backwards
+  - Our pixel is stored in memory as RGBX, and we are on little endian architecture, so windows loads values into the back of the 32 bit register
+  The 32 bit pixel would be filled in the back to front so -> 0x xxBBGGRR
+  - Windows wanted the register to show the value as 0x xxRRGGBB, so they flipped the RGB in memory to be stored as BGR
+  - so when it would be filled into memory it would be look like 0x xxRRGGBB
+
